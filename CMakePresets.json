@@ -1,0 +1,22 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "pico2",
+      "displayName": "Pico 2 (RP2350)",
+      "description": "Use project root; Pico SDK sets toolchain. Do not pass CMAKE_C_COMPILER.",
+      "binaryDir": "${sourceDir}/build",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "TRUE"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "pico2",
+      "configurePreset": "pico2"
+    }
+  ]
+}
