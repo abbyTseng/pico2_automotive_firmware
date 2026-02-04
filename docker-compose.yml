@@ -1,0 +1,22 @@
+services:
+  builder:
+    # 使用當前目錄下的 Dockerfile 建置映像檔
+    build: .
+    image: pico2_builder:latest
+    
+    # 關鍵：將 Mac 的當前目錄 (.) 掛載到容器內的 /workspace
+    # 這樣容器編譯完的檔案，會直接出現在你的 Mac 上
+    volumes:
+      - .:/workspace
+    
+    # 設定環境變數，確保 SDK 知道我們要編譯無線版
+    environment:
+      - PICO_BOARD=pico2_w
+      
+    # 這是我們的「一鍵編譯指令」
+    # 注意：我們使用 'build_docker' 資料夾，與 Mac 本機的 'build' 分開，避免路徑衝突
+    command: >
+      /bin/bash -c "
+      cmake -B build_docker -DPICO_BOARD=pico2_w -DCMAKE_BUILD_TYPE=Debug . &&
+      cmake --build build_docker -j4
+      "

@@ -9,9 +9,9 @@ build/
 
 # 忽略 Mac 系統檔
 .DS_Store
-
 # 忽略 VS Code 個人設定
 .vscode/
-
 # 忽略 Clangd 快取
 .cache/
+# Docker 編譯產出物
+build_docker/
