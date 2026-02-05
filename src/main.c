@@ -7,7 +7,7 @@
 #include "hal/hal_init.h"
 
 int main(void) {
-// 1. 系統硬體初始化
+    // 1. 系統硬體初始化
     hal_init_system();
 
     // 2. 應用層初始化

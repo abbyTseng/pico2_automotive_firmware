@@ -21,7 +21,9 @@ void app_blink_init(void) {
     }
 }
 
-void app_blink_run(void) {
+void app_blink_run(void) 
+
+{
     // 3. 防禦性檢查
     if ((my_led != NULL) && (my_led->toggle != NULL)) {
         my_led->toggle();
