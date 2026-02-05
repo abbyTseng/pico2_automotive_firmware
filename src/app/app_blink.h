@@ -14,7 +14,11 @@ extern "C" {
  * Application entry. Initializes LED via HAL and runs blink loop.
  * Called once from main after hal_init().
  */
-void app_run(void);
+// 應用層初始化：獲取 HAL 介面
+void app_blink_init(void);
+
+// 應用層主邏輯：執行閃爍與延遲
+void app_blink_run(void);
 
 #ifdef __cplusplus
 }

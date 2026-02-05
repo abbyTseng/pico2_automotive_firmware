@@ -14,7 +14,8 @@ extern "C" {
  * Initialize HAL / system (stdio, clocks, etc.).
  * Call once from main before app_run().
  */
-void hal_init(void);
+// 系統級初始化：負責 Clocks, Stdio, Watchdog 等
+void hal_init_system(void);
 
 #ifdef __cplusplus
 }

@@ -1,0 +1,3 @@
+/workspace/src/ON/picotool-subbuild/CMakeFiles/picotool-populate.dir
+/workspace/src/ON/picotool-subbuild/CMakeFiles/edit_cache.dir
+/workspace/src/ON/picotool-subbuild/CMakeFiles/rebuild_cache.dir

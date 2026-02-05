@@ -7,8 +7,15 @@
 #include "hal/hal_init.h"
 
 int main(void) {
-    hal_init();
-    app_run();
-    /* never reached in blink example */
+// 1. 系統硬體初始化
+    hal_init_system();
+
+    // 2. 應用層初始化
+    app_blink_init();
+
+    // 3. 主迴圈
+    while (1) {
+        app_blink_run();
+    }
     return 0;
 }

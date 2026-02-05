@@ -7,4 +7,6 @@
 
 #include "pico/stdlib.h"
 
-void hal_init(void) { stdio_init_all(); }
+void hal_init_system(void) {
+    stdio_init_all();
+}
