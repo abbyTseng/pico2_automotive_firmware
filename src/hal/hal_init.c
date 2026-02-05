@@ -4,9 +4,7 @@
  */
 
 #include "hal_init.h"
+
 #include "pico/stdlib.h"
 
-void hal_init(void)
-{
-    stdio_init_all();
-}
+void hal_init(void) { stdio_init_all(); }

@@ -1,0 +1,27 @@
+---
+# 語言：C/C++
+Language: Cpp
+
+# 基底風格：Google (業界標準之一，清晰易讀)
+BasedOnStyle: Google
+
+# 縮排寬度：4 個空白 (嵌入式通常喜歡 4 空格，比 Google 預設的 2 空格更深，層次分明)
+IndentWidth: 4
+
+# Tab 鍵設定：永遠使用空白，不使用 Tab (避免不同編輯器顯示寬度不同)
+UseTab: Never
+
+# 單行最大長度：100 (Google 預設 80 有點太短，100 對現代螢幕剛好)
+ColumnLimit: 100
+
+# 指針(*)的位置：靠右 (int* p 還是 int *p？這裡設定靠變數名：int *p)
+PointerAlignment: Right
+
+# Include 標頭檔排序：自動排序 (讓 #include 井然有序)
+SortIncludes: true
+
+# 針對 switch-case 的縮排
+IndentCaseLabels: true
+
+# 函數參數如果太長換行時，對齊括號
+AlignAfterOpenBracket: Align

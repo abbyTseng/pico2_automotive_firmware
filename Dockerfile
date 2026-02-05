@@ -20,6 +20,7 @@ RUN apt-get update && apt-get install -y \
     libstdc++-arm-none-eabi-newlib \
     python3 \
     git \
+    clang-format \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. 設定工作目錄 (容器內的預設資料夾)
