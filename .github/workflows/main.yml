@@ -23,6 +23,7 @@ jobs:
         run: |
           cppcheck --enable=all --error-exitcode=1 \
           --suppress=missingInclude \
+          --suppress=missingIncludeSystem \
           --suppress=unusedFunction \
           --suppress=unmatchedSuppression \
           -I src/common -I src/hal -I src/app \
