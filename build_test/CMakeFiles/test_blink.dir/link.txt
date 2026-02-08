@@ -1,0 +1,1 @@
+/usr/bin/cc CMakeFiles/test_blink.dir/test_blink.c.o CMakeFiles/test_blink.dir/workspace/src/app/app_blink.c.o CMakeFiles/test_blink.dir/mock_hal_led.c.o CMakeFiles/test_blink.dir/mock_hal_delay.c.o -o test_blink  _deps/unity-build/libunity.a 
