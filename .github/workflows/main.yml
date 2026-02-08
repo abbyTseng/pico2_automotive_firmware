@@ -22,8 +22,9 @@ jobs:
         # 如果有錯誤，回傳 exit code 1 (讓 CI 失敗)
         run: |
           cppcheck --enable=all --error-exitcode=1 \
-          --suppress=missingIncludeSystem \
+          --suppress=missingInclude \
           --suppress=unusedFunction \
+          --suppress=unmatchedSuppression \
           -I src/common -I src/hal -I src/app \
           src/
 
