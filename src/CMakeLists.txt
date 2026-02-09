@@ -9,6 +9,9 @@ add_subdirectory(app)
 # -----------------------------------------------------------------------------
 add_executable(${PROJECT_NAME}_main main.c)
 
+pico_enable_stdio_usb(${PROJECT_NAME}_main 1)
+pico_enable_stdio_uart(${PROJECT_NAME}_main 0)
+
 target_include_directories(${PROJECT_NAME}_main PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/common

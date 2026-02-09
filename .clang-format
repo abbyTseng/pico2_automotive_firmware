@@ -25,3 +25,6 @@ IndentCaseLabels: true
 
 # 函數參數如果太長換行時，對齊括號
 AlignAfterOpenBracket: Align
+
+# 括號的位置
+BreakBeforeBraces: Allman

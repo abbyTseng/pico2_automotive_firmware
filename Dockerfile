@@ -21,6 +21,8 @@ RUN apt-get update && apt-get install -y \
     python3 \
     git \
     clang-format \
+    libusb-1.0-0-dev \
+    pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
 # 3. 設定工作目錄 (容器內的預設資料夾)

@@ -15,3 +15,5 @@ build/
 .cache/
 # Docker 編譯產出物
 build_docker/
+# test 編譯產出物
+build_test/
