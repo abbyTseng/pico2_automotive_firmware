@@ -5,6 +5,7 @@ add_library(hal STATIC
     hal_led.c
     hal_delay.c
     hal_dma.c
+    hal_multicore.c
 )
 
 target_include_directories(hal PUBLIC
@@ -16,8 +17,7 @@ target_link_libraries(hal PUBLIC
     pico_cyw43_arch_none
     hardware_gpio
     hardware_dma
-)
-
-target_link_libraries(hal PRIVATE
+    pico_multicore
     common
 )
+
