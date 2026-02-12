@@ -6,6 +6,7 @@ add_library(hal STATIC
     hal_delay.c
     hal_dma.c
     hal_multicore.c
+    hal_gpio.c
 )
 
 target_include_directories(hal PUBLIC

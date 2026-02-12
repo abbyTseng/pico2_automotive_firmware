@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "hal_delay.h"
+#include "hal_gpio.h"
 #include "hal_led.h"
 #include "hal_multicore.h"
 
@@ -22,6 +23,17 @@ static void core1_worker_task(void)
     }
 }
 
+// 2. 新增：這是我們的 Callback 函式
+// 當按鈕被按下時，HAL 會自動呼叫這裡！
+static void on_button_press(uint32_t pin, uint32_t event)
+{
+    // 告訴編譯器忽略未使用的參數
+    (void)event;
+    // 注意：這裡是在中斷裡面，盡量不要用 printf (除非是為了 Debug)
+    // 這裡示範簡單邏輯：也可以在這裡 push 到 FIFO
+    printf("[App Event] Button pressed on pin %lu!\n", (unsigned long)pin);
+}
+
 // App 主程式
 void app_blink_run(void)
 {
@@ -31,6 +43,10 @@ void app_blink_run(void)
     {
         led->init();
     }
+    // 3. 新增：初始化 GPIO 並註冊 Callback
+    // 假設我們用 GPIO 22 當按鈕 (BOOTSEL 也可以，但它是特殊的，我們先用普通 GPIO)
+    hal_gpio_init_input(22);
+    hal_gpio_set_callback(on_button_press);
 
     printf("[Core 0] Launching Core 1...\n");
     hal_multicore_launch(core1_worker_task);
