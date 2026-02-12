@@ -18,8 +18,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cppcheck
 
       - name: Run MISRA C Compliance Check
-        # 檢查 src 資料夾，啟用所有警告，並強制檢查缺失的 include
-        # 如果有錯誤，回傳 exit code 1 (讓 CI 失敗)
+        # 檢查 src 資料夾，啟用所有警告
         run: |
           cppcheck --enable=all --error-exitcode=1 \
           --suppress=missingInclude \
@@ -32,7 +31,7 @@ jobs:
   # --- Job 2: 單元測試 (Unit Test) ---
   unit-test:
     runs-on: ubuntu-latest
-    needs: static-analysis # 只有當靜態分析通過後，才跑測試
+    needs: static-analysis
     steps:
       - uses: actions/checkout@v4
 
@@ -40,24 +39,28 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y cmake build-essential
 
       - name: Configure CMake (Test)
-        # 這裡的 -S test 代表 source 在 test 資料夾
+        # 這裡會自動讀取 test/CMakeLists.txt
+        # 並抓到我們設定好的 Mock 路徑
         run: cmake -S test -B build_test
 
       - name: Build Tests
         run: cmake --build build_test
 
-      - name: Run Tests
-        # 執行編譯出來的測試檔
-        run: ./build_test/test_blink
+      - name: Run Tests (CTest)
+        # 💡 關鍵修正：使用 ctest 自動執行所有測試 (Blink + GPIO)
+        # --output-on-failure: 只有失敗時才印出詳細錯誤，保持版面乾淨
+        run: |
+          cd build_test
+          ctest --output-on-failure
 
   # --- Job 3: 韌體編譯 (Firmware Build) ---
   firmware-build:
     runs-on: ubuntu-latest
-    needs: unit-test # 測試都過了，才真的去編譯韌體給 Pico 用
+    needs: unit-test # 測試都過了，才真的去編譯韌體
     steps:
       - uses: actions/checkout@v4
       
-      # 安裝 ARM Cross Compiler (跟我們 Docker 裡的一樣)
+      # 安裝 ARM Cross Compiler
       - name: Install Toolchain
         run: |
           sudo apt-get update
@@ -73,6 +76,7 @@ jobs:
 
       # 設定 CMake (指定板子為 pico2_w)
       - name: Configure CMake (Firmware)
+        # 這裡的 -S . 代表 source 在根目錄
         run: cmake -S . -B build -DPICO_BOARD=pico2_w
 
       # 開始編譯 (使用 4 核心加速)
