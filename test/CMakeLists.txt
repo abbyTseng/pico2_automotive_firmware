@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.14)
 
 project(pico2_tests C)
 
-# 1. 自動下載 Unity 測試框架
+# ==============================================================================
+# 1. 環境準備 (Unity 測試框架)
+# ==============================================================================
 include(FetchContent)
 FetchContent_Declare(
   unity
@@ -11,26 +13,40 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(unity)
 
-# 2. 設定包含路徑 (讓我們能測試 src/app 的程式碼)
-# 注意：我們要測試的是「純邏輯」，所以只包含 app 和 common，不包含 hal (因為 host 沒有硬體)
+enable_testing()
+
+# 設定標頭檔搜尋路徑 (讓測試程式找不到 .h 檔時去哪裡找)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/app
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common
-    ${CMAKE_CURRENT_SOURCE_DIR}/../src/hal  # 雖然包含，但我們會用 Mock (替身)
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/hal
 )
 
-# 3. 定義第一個測試執行檔
+# ==============================================================================
+# 2. 既有的測試: test_blink (測試 App 層邏輯)
+# ==============================================================================
+# 如果你之前的 mock 檔還在，這個測試應該要能跑
+# (備註：如果你 app_blink.c 加入了多核心功能，這裡可能缺 hal_multicore 的 mock，
+#  如果報錯可以暫時註解掉下面這一段，或是補上 mock_hal_multicore.c)
 add_executable(test_blink
     test_blink.c
     ../src/app/app_blink.c
-    # 這裡我們需要一個 "假的" HAL，不然 app_blink.c 連結會失敗
     mock_hal_led.c 
     mock_hal_delay.c
+    # 如果 app_blink.c 用到了 multicore，這裡未來要補 mock_hal_multicore.c
+)
+target_link_libraries(test_blink unity)
+add_test(NAME test_blink COMMAND test_blink)
+
+# ==============================================================================
+# 3. 新增的測試: test_ringbuffer (測試 Common 資料結構)
+# ==============================================================================
+add_executable(test_ringbuffer
+    test_ringbuffer.c                  # 測試腳本 (我們等下要寫)
+    ../src/common/common_ringbuffer.c  # 被測試的實作 (我們等下要寫)
 )
 
-# 4. 連結 Unity
-target_link_libraries(test_blink unity)
+target_link_libraries(test_ringbuffer unity)
 
-# 5. 加入 CTest 支援
-enable_testing()
-add_test(NAME test_blink COMMAND test_blink)
+# 加入 CTest 清單
+add_test(NAME test_ringbuffer COMMAND test_ringbuffer)
