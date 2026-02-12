@@ -17,6 +17,7 @@ enable_testing()
 
 # 設定標頭檔搜尋路徑 (讓測試程式找不到 .h 檔時去哪裡找)
 include_directories(
+    ${CMAKE_CURRENT_SOURCE_DIR}/mock
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/app
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/hal
@@ -34,19 +35,28 @@ add_executable(test_blink
     mock_hal_led.c 
     mock_hal_delay.c
     mock_hal_multicore.c
+    # 如果 app_blink.c 有用到 hal_gpio，這裡可能也要補上 mock/hardware/gpio.h 的路徑依賴
 )
 target_link_libraries(test_blink unity)
 add_test(NAME test_blink COMMAND test_blink)
 
 # ==============================================================================
-# 3. 新增的測試: test_ringbuffer (測試 Common 資料結構)
+# 4. Day 8 新增的測試: test_gpio_callback (一定要加這個 CI 才會跑)
 # ==============================================================================
-add_executable(test_ringbuffer
-    test_ringbuffer.c                  # 測試腳本 (我們等下要寫)
-    ../src/common/common_ringbuffer.c  # 被測試的實作 (我們等下要寫)
+add_executable(test_gpio_callback
+    test_gpio_callback.c
+    ../src/hal/hal_gpio.c   # 這是我們要測的目標 (它會 include <pico/stdlib.h>)
 )
+target_link_libraries(test_gpio_callback unity)
+add_test(NAME test_gpio_callback COMMAND test_gpio_callback)
 
-target_link_libraries(test_ringbuffer unity)
-
-# 加入 CTest 清單
-add_test(NAME test_ringbuffer COMMAND test_ringbuffer)
+# ==============================================================================
+# 5. Day 7 的測試: test_ringbuffer
+# ==============================================================================
+# (如果你還沒寫 test_ringbuffer.c，這段可以先註解掉，不然會報錯找不到檔案)
+# add_executable(test_ringbuffer
+#    test_ringbuffer.c
+#    ../src/common/common_ringbuffer.c
+# )
+# target_link_libraries(test_ringbuffer unity)
+# add_test(NAME test_ringbuffer COMMAND test_ringbuffer)
