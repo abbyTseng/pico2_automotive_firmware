@@ -33,7 +33,7 @@ add_executable(test_blink
     ../src/app/app_blink.c
     mock_hal_led.c 
     mock_hal_delay.c
-    # 如果 app_blink.c 用到了 multicore，這裡未來要補 mock_hal_multicore.c
+    mock_hal_multicore.c
 )
 target_link_libraries(test_blink unity)
 add_test(NAME test_blink COMMAND test_blink)
