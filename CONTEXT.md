@@ -1,76 +1,115 @@
-# 專案架構與環境設定 (CONTEXT) - Last Updated: Day 7 (Completed)
+這是一份更新後的 `context.md`。
 
-## 1. 硬體規格
-* **Target**: Raspberry Pi Pico 2 (RP2350)
-* **Variant**: Pico 2 W (Wireless) -> CMake 參數 `-DPICO_BOARD=pico2_w`
-* **Architecture**: Dual-core ARM Cortex-M33 (AMP Mode)
+這份文件現在包含了我們今天完成的所有里程碑：**CI/CD 流水線建立**、**Docker 測試腳本**、以及最關鍵的 **白箱測試策略 (White-box Testing)**。
 
-## 2. 開發環境 (Strict Rules)
-* **策略**: 必須使用 Docker 進行編譯，嚴禁依賴 Host 本機 Toolchain。
-* **Docker Image**: `pico2_builder` (Tag: latest)
-* **Container OS**: Linux (Ubuntu 22.04)
-* **關鍵依賴**: Dockerfile 必須包含 `libusb-1.0-0-dev` 與 `pkg-config`。
-* **掛載**: 將 Host 當前目錄 `.` 掛載到 Container `/workspace`。
+請將以下內容完全覆蓋你原本的 `context.md`：
 
-## 3. 編譯指令
-* **設定檔**: `docker-compose.yml` (位於根目錄)
-* **指令**: `docker compose up` (若修改 Dockerfile 則加 `--build`)
-* **產出**: `build_docker/pico2_firmware_main.uf2`
-* **路徑規則**: Host 端 `build/` (Mac用) 與 `build_docker/` (Docker用) 必須分開。
-* **CMake 變數**: 使用 `${PROJECT_NAME}_main` 來參照執行檔。
+```markdown
+# Context: Pico 2 Automotive Firmware Project
 
-## 4. 專案結構 (Modular Architecture)
-* **`src/common/` (Interface Lib)**:
-* 僅包含 `.h` (如 `common_status.h`, `common_types.h`)。
-* CMake 屬性: `INTERFACE`。
+## 1. Project Overview
+* **Project Name:** pico2_automotive_firmware
+* **Target Hardware:** Raspberry Pi Pico 2 (RP2350)
+* **Language:** C (Standard C99/C11)
+* **Build System:** CMake
+* **Operating System:** macOS (Development), Ubuntu (CI/CD), Docker (Standardized Build Env)
+* **Current Phase:** Phase 2 - HAL Implementation & CI/CD Automation (Day 8/9)
 
-* **`src/hal/` (Static Lib)**:
-* **唯一**允許 include `<hardware/*.h>` 與 `<pico/*.h>` 的地方。
-* 透過 `PUBLIC` 屬性將 SDK 路徑與 Common 型別傳遞給 App。
-* 實作：`hal_led` (V-Table pattern), `hal_multicore` (FIFO wrapper).
+## 2. CI/CD Architecture (Dual-Track)
+We use a "Dual-Track" testing strategy to ensure code quality both locally and in the cloud.
 
-* **`src/app/` (Static Lib)**:
-* 純業務邏輯。透過 HAL 介面操作硬體。
-* **嚴禁**直接呼叫 SDK 底層 API。
+### A. Local Guardrail (The "Hook")
+* **Trigger:** `git commit`
+* **Tool:** `pre-commit` framework.
+* **Config:** `.pre-commit-config.yaml`
+* **Actions:**
+    1.  **Static Analysis:** Runs `cppcheck` locally (suppresses missing headers, checks logic).
+    2.  **Unit Tests:** Runs `scripts/run_tests.sh`.
+        * Spins up `pico2_builder` Docker container.
+        * Mounts current directory to `/workspace`.
+        * Runs `cmake` & `ctest` inside Docker.
 
-* **`src/main.c`**:
-* **極簡入口 (Clean Entry)**。只負責 `hal_init_system()` 並呼叫 App 入口 (`app_blink_run`)。
+### B. Cloud Factory (GitHub Actions)
+* **Trigger:** `git push`
+* **Config:** `.github/workflows/main.yml`
+* **Actions:**
+    1.  **Lint:** Cppcheck.
+    2.  **Test:** Unit Tests (Docker/CMake).
+    3.  **Build:** Compiles the actual Firmware (`.uf2`) using Pico SDK.
+    4.  **Artifact:** Uploads the `.uf2` file for release.
+
+## 3. Testing Strategy (Unity Framework)
+
+### A. Mocking Strategy
+* **Level 1: Testing App Logic (e.g., `test_blink.c`)**
+    * **Goal:** Verify App logic without hardware.
+    * **Method:** Mock the HAL.
+    * **Files:** `test/mock_hal_gpio.c`, `test/mock_hal_led.c`.
+    * **CMake:** Add these mock `.c` files to `add_executable`.
+
+* **Level 2: Testing HAL Logic (e.g., `test_gpio_callback.c`)**
+    * **Goal:** Verify HAL interacts correctly with SDK (or internal logic).
+    * **Method:** Mock the Pico SDK headers.
+    * **Files:** `test/mock/hardware/gpio.h`.
+    * **CMake:** Use `include_directories(test/mock)`.
+
+### B. White-box Testing (Crucial for ISRs)
+To test `static` functions (like ISR handlers) or `static` variables (like callbacks):
+1.  **Technique:** Directly `#include "../src/hal/hal_xxx.c"` inside the test file (`test_xxx.c`).
+2.  **Rule:** **DO NOT** add the source file (`src/hal/hal_xxx.c`) to `add_executable` in `test/CMakeLists.txt`.
+    * *Why?* It causes "Multiple Definition" errors because the code is already included in the test file.
+3.  **Example:** `test_gpio_callback.c` includes `src/hal/hal_gpio.c` to access `_internal_gpio_isr`.
+
+## 4. Key Directory Structure
+```text
+pico2_automotive_firmware/
+├── .github/workflows/
+│   └── main.yml           # Cloud CI workflow
+├── .pre-commit-config.yaml # Local git hook config
+├── scripts/
+│   └── run_tests.sh       # Script to run tests in Docker (used by pre-commit)
+├── src/
+│   ├── app/               # Application logic (Blink, etc.)
+│   └── hal/               # Hardware Abstraction Layer (GPIO, LED, etc.)
+├── test/
+│   ├── CMakeLists.txt     # Test build configuration
+│   ├── mock/              # Header mocks (fake SDK)
+│   │   └── hardware/
+│   │       └── gpio.h
+│   ├── mock_hal_gpio.c    # Implementation mocks (fake HAL for App)
+│   ├── test_blink.c       # Tests for App
+│   └── test_gpio_callback.c # Tests for HAL (White-box)
+└── Dockerfile             # Build environment definition
 
 
-## 5. 目前進度
-* **Day 6**: DMA (Direct Memory Access) 實作完成。
-* **成就**: UART Zero-Copy 傳輸，CPU 無須介入資料搬運。
 
-* **Day 7**: 多核心 (Multicore) 與架構重構完成。
-* **成就**: 啟用 Core 0 (控制層) 與 Core 1 (運算層) 並行運作。雙核心 FIFO 通訊、CMake 相依性修復、TDD 實作 Ring Buffer。
-* **技術**:
-* **AMP 架構**: AMP 架構、Thread-Safe 設計準備、Explicit Casting (MISRA C)。
-* **FIFO 通訊**: 實作 `hal_multicore_fifo_push/pop` 進行核心間資料傳遞。
-* **CMake 重構**: 修復 Library 相依性，使用 `target_link_libraries(... PUBLIC ...)` 解決標頭檔路徑問題。
-* **OOC**: 實作 Object-Oriented C (V-Table) 於 `LedDevice`。
-* **驗證**: Serial Log 顯示 Core 1 正確接收並回傳運算結果。
+## 5. Development Workflow Rules
 
-* **Day 8**: Decoupled Callback Architecture (Observer Pattern) 完成。
-* **成就**: 
-    * 建立 `hal_gpio` 模組，封裝 SDK 中斷。
-    * 定義 `hal_gpio_callback_t` 介面，實現 HAL 與 App 解耦。
-    * 驗證：實體按鈕觸發 ISR，成功插隊主迴圈並執行 App Callback。
-    * 觀察到 Switch Bounce 現象，證明系統即時反應能力。
+1. **New Feature:** Create Source (`src/`) -> Create Test (`test/`) -> Update `test/CMakeLists.txt`.
+2. **Before Commit:**
+* You can run `pre-commit run --all-files` manually to check.
+* Or just `git commit`, and the hook will run automatically.
 
-* **下一步**: Day 9: 
-   * Bus Recovery & Error Handling**
-   * 實作 I2C "Stuck Bus" 自動復原機制 (9 Clocks Recovery)。
-   * 設計 Driver Timeout 機制。
 
-## 6. 架構設計原則 (Architecture Standards) 🛡️
-* **CMake 原則**:
-* **Target-Centric**: 一切以 Target 為核心，不使用全域 `include_directories`。
-* **Propagation**: 庫 (Library) 必須正確設定 `PUBLIC` / `PRIVATE` / `INTERFACE` 以傳遞路徑依賴。
-* **TDD First**: 純邏輯模組 (如 Buffer, Parser) 必須優先撰寫單元測試。
-* **Clean Git**: 嚴禁提交編譯產物 (`build/`, `src/ON/`)。
-* **Explicit Types**: `printf` 必須使用強制轉型以確保跨平台相容性。
+3. **Mocking Rule:**
+* If testing **App**, link against `mock_hal_xxx.c`.
+* If testing **HAL**, link against `test/mock` headers.
 
-* **Level 1 (HAL)**: 翻譯層。封裝硬體細節，提供 V-Table 或簡化介面。
-* **Level 2 (App)**: 決策層。具備可移植性，不依賴特定硬體暫存器。
-* **Level 3 (Interface)**: 契約層。`common` 定義跨層級的資料結構與錯誤碼。
 
+4. **Static Testing Rule:**
+* If testing `static` functions, use `#include "source.c"` and remove source from CMake target list.
+
+
+
+## 6. Known Issues / Notes
+
+* **Cppcheck:** Is configured to suppress `missingInclude` for SDK headers because they exist inside Docker, not necessarily on the local Mac host.
+* **Linker Errors:** If `undefined reference to main` occurs, check if the test file has `int main(void)`. If `undefined reference to static_func`, use the White-box include technique.
+
+
+
+### 建議下一步：
+儲存這份檔案後，你的 AI (我) 在未來的對話中，就能永遠記得：
+1.  我們有 **Docker** 和 **Scripts**。
+2.  我們測試 **ISR (中斷)** 時要用 **White-box (`#include .c`)** 的方法。
+3.  我們的 **CI/CD** 是怎麼跑的。

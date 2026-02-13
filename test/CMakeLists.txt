@@ -35,6 +35,7 @@ add_executable(test_blink
     mock_hal_led.c 
     mock_hal_delay.c
     mock_hal_multicore.c
+    mock_hal_gpio.c
     # 如果 app_blink.c 有用到 hal_gpio，這裡可能也要補上 mock/hardware/gpio.h 的路徑依賴
 )
 target_link_libraries(test_blink unity)
@@ -45,7 +46,7 @@ add_test(NAME test_blink COMMAND test_blink)
 # ==============================================================================
 add_executable(test_gpio_callback
     test_gpio_callback.c
-    ../src/hal/hal_gpio.c   # 這是我們要測的目標 (它會 include <pico/stdlib.h>)
+    #../src/hal/hal_gpio.c   # 這是我們要測的目標 (它會 include <pico/stdlib.h>)
 )
 target_link_libraries(test_gpio_callback unity)
 add_test(NAME test_gpio_callback COMMAND test_gpio_callback)

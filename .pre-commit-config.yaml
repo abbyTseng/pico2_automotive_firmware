@@ -1,0 +1,29 @@
+repos:
+  - repo: local
+    hooks:
+      - id: cppcheck
+        name: 🔍 Static Analysis (Cppcheck)
+        entry: cppcheck
+        language: system
+        types: [c]
+        args: [
+          "--enable=all",
+          "--error-exitcode=1",
+          "--suppress=missingIncludeSystem",
+          "--suppress=unusedFunction",
+          "--suppress=unmatchedSuppression",
+          "--suppress=missingInclude",
+          "-I", "test/mock",
+          "-I", "src/common",
+          "-I", "src/hal",
+          "-I", "src/app",
+          "src/"
+        ]
+        pass_filenames: false
+
+      - id: docker-unit-test
+        name: 🐳 Docker Unit Tests (Unity)
+        entry: ./scripts/run_tests.sh
+        language: system
+        pass_filenames: false
+        always_run: true

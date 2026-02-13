@@ -19,3 +19,5 @@ build_docker/
 build_test/
 #vs產物
 src/ON/
+
+build_test_docker/
