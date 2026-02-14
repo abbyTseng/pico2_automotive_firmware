@@ -1,115 +1,177 @@
-這是一份更新後的 `context.md`。
+沒問題，Abby。你是對的，我剛剛把 Day 10 的目標搞混了。
 
-這份文件現在包含了我們今天完成的所有里程碑：**CI/CD 流水線建立**、**Docker 測試腳本**、以及最關鍵的 **白箱測試策略 (White-box Testing)**。
+根據你提供的 30 天計畫，**Day 10 的重點是儲存與可靠性 (LittleFS)**，而不是 RTOS。
 
-請將以下內容完全覆蓋你原本的 `context.md`：
+這是修正後的 `CONTEXT.md`，請直接覆蓋原本的檔案。這份文件準確反映了我們目前的進度（完成 Day 9 I2C Recovery）以及正確的下一步（Day 10 LittleFS）。
 
 ```markdown
 # Context: Pico 2 Automotive Firmware Project
 
 ## 1. Project Overview
 * **Project Name:** pico2_automotive_firmware
-* **Target Hardware:** Raspberry Pi Pico 2 (RP2350)
+* **Target Hardware:** Raspberry Pi Pico 2 W (RP2350 + CYW43)
 * **Language:** C (Standard C99/C11)
-* **Build System:** CMake
-* **Operating System:** macOS (Development), Ubuntu (CI/CD), Docker (Standardized Build Env)
-* **Current Phase:** Phase 2 - HAL Implementation & CI/CD Automation (Day 8/9)
+* **Build System:** CMake + Docker (Standardized Build Env)
+* **Testing:** Unity Framework (Unit Test) + Saleae/Oscilloscope (Physical Test)
+* **Current Phase:** Phase 2 - HAL Robustness & Architecture Refactoring (Day 9 Completed)
 
-## 2. CI/CD Architecture (Dual-Track)
-We use a "Dual-Track" testing strategy to ensure code quality both locally and in the cloud.
+## 2. Architecture & Design Patterns (Layered Architecture)
+We have refactored the system into a strict 3-layer architecture to ensure decoupling and testability.
+
+### A. Main Layer (`src/main.c`)
+* **Role:** System Scheduler & Configurator.
+* **Responsibilities:**
+    * Initializes System HAL (`hal_init_system`).
+    * Initializes Drivers (`hal_led`, `hal_i2c`).
+    * Injects dependencies into App Layer.
+    * Runs the Super Loop.
+* **Constraint:** **NO** direct hardware manipulation logic allowed here.
+
+### B. App Layer (`src/app/`)
+* **Role:** Business Logic (e.g., `app_display`, `app_blink`).
+* **Responsibilities:**
+    * Implements feature logic (e.g., OLED UI state machine).
+    * Calls HAL interfaces.
+* **Constraint:** Hardware-agnostic. Should run on any MCU if HAL is provided.
+
+### C. HAL Layer (`src/hal/`)
+* **Role:** Hardware Abstraction.
+* **Key Modules:**
+    * **`hal_i2c`:** Implements "9-Clock Recovery" (Bit-banging) for stuck bus scenarios.
+    * **`hal_led`:** Abstracts Pico 2W's CYW43 wireless LED control behind a generic interface.
+    * **`hal_gpio`:** Handles interrupts and callback registration.
+
+---
+
+## 3. CI/CD Architecture (Dual-Track)
 
 ### A. Local Guardrail (The "Hook")
 * **Trigger:** `git commit`
 * **Tool:** `pre-commit` framework.
-* **Config:** `.pre-commit-config.yaml`
 * **Actions:**
-    1.  **Static Analysis:** Runs `cppcheck` locally (suppresses missing headers, checks logic).
-    2.  **Unit Tests:** Runs `scripts/run_tests.sh`.
-        * Spins up `pico2_builder` Docker container.
-        * Mounts current directory to `/workspace`.
-        * Runs `cmake` & `ctest` inside Docker.
+    1.  **Static Analysis:** `cppcheck` (configured to suppress missing system headers).
+    2.  **Unit Tests:** `scripts/run_tests.sh` (Runs CMake/CTest inside Docker).
 
 ### B. Cloud Factory (GitHub Actions)
 * **Trigger:** `git push`
-* **Config:** `.github/workflows/main.yml`
-* **Actions:**
-    1.  **Lint:** Cppcheck.
-    2.  **Test:** Unit Tests (Docker/CMake).
-    3.  **Build:** Compiles the actual Firmware (`.uf2`) using Pico SDK.
-    4.  **Artifact:** Uploads the `.uf2` file for release.
+* **Actions:** Lint, Test, Build (`.uf2`), and Artifact Upload.
 
-## 3. Testing Strategy (Unity Framework)
+---
+
+## 4. Testing Strategy (Unity Framework)
 
 ### A. Mocking Strategy
-* **Level 1: Testing App Logic (e.g., `test_blink.c`)**
+* **Level 1: Testing App Logic**
     * **Goal:** Verify App logic without hardware.
-    * **Method:** Mock the HAL.
-    * **Files:** `test/mock_hal_gpio.c`, `test/mock_hal_led.c`.
-    * **CMake:** Add these mock `.c` files to `add_executable`.
+    * **Method:** Link against `mock_hal_xxx.c`.
+    * **CMake:** Add mock source files to `add_executable`.
 
-* **Level 2: Testing HAL Logic (e.g., `test_gpio_callback.c`)**
-    * **Goal:** Verify HAL interacts correctly with SDK (or internal logic).
-    * **Method:** Mock the Pico SDK headers.
-    * **Files:** `test/mock/hardware/gpio.h`.
-    * **CMake:** Use `include_directories(test/mock)`.
+* **Level 2: Testing HAL Logic (The "Mock SDK" Approach)**
+    * **Goal:** Verify HAL interacts correctly with Pico SDK functions (e.g., `gpio_init`).
+    * **Method:** Use `test/mock/` headers to simulate SDK behavior in Docker (x86).
+    * **Files:** `test/mock/pico/stdlib.h`, `test/mock/hardware/gpio.h`.
 
-### B. White-box Testing (Crucial for ISRs)
-To test `static` functions (like ISR handlers) or `static` variables (like callbacks):
-1.  **Technique:** Directly `#include "../src/hal/hal_xxx.c"` inside the test file (`test_xxx.c`).
-2.  **Rule:** **DO NOT** add the source file (`src/hal/hal_xxx.c`) to `add_executable` in `test/CMakeLists.txt`.
-    * *Why?* It causes "Multiple Definition" errors because the code is already included in the test file.
-3.  **Example:** `test_gpio_callback.c` includes `src/hal/hal_gpio.c` to access `_internal_gpio_isr`.
+### B. White-box Testing (Crucial for Internal Logic)
+To test `static` functions (ISRs, internal state machines) or `static` variables:
+1.  **Technique:** Directly `#include "../src/hal/hal_xxx.c"` inside the test file.
+2.  **Rule:** **DO NOT** add the source file to `add_executable` in CMake to avoid multiple definitions.
+3.  **MISRA C Compromise:** To mock standard SDK types like `uint`, we use `typedef unsigned int uint;` in our Mock headers (`mock/pico/stdlib.h`) to satisfy the compiler on non-embedded platforms.
 
-## 4. Key Directory Structure
+---
+
+## 5. Key Directory Structure
 ```text
-pico2_automotive_firmware/
-├── .github/workflows/
-│   └── main.yml           # Cloud CI workflow
-├── .pre-commit-config.yaml # Local git hook config
-├── scripts/
-│   └── run_tests.sh       # Script to run tests in Docker (used by pre-commit)
-├── src/
-│   ├── app/               # Application logic (Blink, etc.)
-│   └── hal/               # Hardware Abstraction Layer (GPIO, LED, etc.)
-├── test/
-│   ├── CMakeLists.txt     # Test build configuration
-│   ├── mock/              # Header mocks (fake SDK)
-│   │   └── hardware/
-│   │       └── gpio.h
-│   ├── mock_hal_gpio.c    # Implementation mocks (fake HAL for App)
-│   ├── test_blink.c       # Tests for App
-│   └── test_gpio_callback.c # Tests for HAL (White-box)
-└── Dockerfile             # Build environment definition
+pchinghuitseng@Mac pico2_automotive_firmware % tree -I "build*|.git|.vscode"
+.
+├── 30天計畫.md
+├── CMakeLists.txt
+├── CMakePresets.json
+├── CONTEXT.md
+├── Dockerfile
+├── docker-compose.yml
+├── pico_sdk_import.cmake
+├── scripts
+│   └── run_tests.sh
+├── src
+│   ├── CMakeLists.txt
+│   ├── app
+│   │   ├── CMakeLists.txt
+│   │   ├── app_blink.c
+│   │   ├── app_blink.h
+│   │   ├── app_display.c
+│   │   └── app_display.h
+│   ├── common
+│   │   ├── CMakeLists.txt
+│   │   ├── common_ringbuffer.c
+│   │   ├── common_ringbuffer.h
+│   │   ├── common_status.h
+│   │   └── common_types.h
+│   ├── hal
+│   │   ├── CMakeLists.txt
+│   │   ├── hal_delay.c
+│   │   ├── hal_delay.h
+│   │   ├── hal_dma.c
+│   │   ├── hal_dma.h
+│   │   ├── hal_gpio.c
+│   │   ├── hal_gpio.h
+│   │   ├── hal_i2c.c
+│   │   ├── hal_i2c.h
+│   │   ├── hal_init.c
+│   │   ├── hal_init.h
+│   │   ├── hal_led.c
+│   │   ├── hal_led.h
+│   │   ├── hal_multicore.c
+│   │   └── hal_multicore.h
+│   └── main.c
+└── test
+    ├── CMakeLists.txt
+    ├── mock
+    │   ├── hardware
+    │   │   ├── gpio.h
+    │   │   └── i2c.h
+    │   └── pico
+    │       └── stdlib.h
+    ├── mock_hal_delay.c
+    ├── mock_hal_gpio.c
+    ├── mock_hal_led.c
+    ├── mock_hal_multicore.c
+    ├── test_app_display.c
+    ├── test_blink.c
+    ├── test_gpio_callback.c
+    ├── test_hal_i2c.c
+    └── test_ringbuffer.c
+
+10 directories, 48 files
 
 
-
-## 5. Development Workflow Rules
+## 6. Development Workflow Rules
 
 1. **New Feature:** Create Source (`src/`) -> Create Test (`test/`) -> Update `test/CMakeLists.txt`.
-2. **Before Commit:**
-* You can run `pre-commit run --all-files` manually to check.
-* Or just `git commit`, and the hook will run automatically.
+2. **Mocking Rule:**
+* Testing **App**? Link `mock_hal_xxx.c`.
+* Testing **HAL**? Include `test/mock` headers.
 
 
-3. **Mocking Rule:**
-* If testing **App**, link against `mock_hal_xxx.c`.
-* If testing **HAL**, link against `test/mock` headers.
-
-
-4. **Static Testing Rule:**
-* If testing `static` functions, use `#include "source.c"` and remove source from CMake target list.
+3. **Static Testing Rule:**
+* Testing `static` functions? Use `#include "source.c"`.
 
 
 
-## 6. Known Issues / Notes
+## 7. Next Steps (Day 10)
 
-* **Cppcheck:** Is configured to suppress `missingInclude` for SDK headers because they exist inside Docker, not necessarily on the local Mac host.
-* **Linker Errors:** If `undefined reference to main` occurs, check if the test file has `int main(void)`. If `undefined reference to static_func`, use the White-box include technique.
+* **Goal:** Storage & Reliability (LittleFS).
+* **Tasks:**
+1. **Integrate LittleFS:** Add the library to the project structure.
+2. **Mount Filesystem:** Configure LittleFS on the internal Flash of RP2350.
+3. **Power-Loss Resilience Test:**
+* Create a "Boot Counter" file.
+* Simulate power cuts during write operations.
+* Verify filesystem integrity (no corruption) upon reboot.
 
 
 
-### 建議下一步：
-儲存這份檔案後，你的 AI (我) 在未來的對話中，就能永遠記得：
-1.  我們有 **Docker** 和 **Scripts**。
-2.  我們測試 **ISR (中斷)** 時要用 **White-box (`#include .c`)** 的方法。
-3.  我們的 **CI/CD** 是怎麼跑的。
+
+
+```
+
+```

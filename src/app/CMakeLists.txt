@@ -2,6 +2,7 @@
 
 add_library(app STATIC
     app_blink.c
+    app_display.c
 )
 
 target_include_directories(app PUBLIC

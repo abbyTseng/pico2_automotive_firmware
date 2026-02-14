@@ -1,10 +1,41 @@
 #include "unity.h"
 
-// =========================================================
-// 💡 白箱測試技巧
-// 直接 Include 原始碼 (.c)，這樣我們就能存取 static 變數
-// =========================================================
+// 1. 先引入 Mock Headers (定義 uint 和 SDK 原型)
+#include "mock/hardware/gpio.h"
+#include "mock/pico/stdlib.h"
+
+// 2. 白箱測試：引入原始碼
+// (這時候 hal_gpio.c 看到的 uint 已經被上面定義好了，所以不會報錯)
 #include "../src/hal/hal_gpio.c"
+
+// =========================================================
+// 🚧 Mock SDK 實作 (Stubs)
+// 為了讓 hal_gpio.c 能通過連結，我們必須實作它呼叫的 SDK 函式
+// =========================================================
+
+void gpio_init(uint gpio) { (void)gpio; }
+void gpio_set_dir(uint gpio, bool out)
+{
+    (void)gpio;
+    (void)out;
+}
+void gpio_pull_up(uint gpio) { (void)gpio; }
+
+// 這是最重要的一個，因為 hal_gpio_init_input 會呼叫它
+void gpio_set_irq_enabled_with_callback(uint gpio, uint32_t events, bool enabled,
+                                        gpio_irq_callback_t callback)
+{
+    (void)gpio;
+    (void)events;
+    (void)enabled;
+    (void)callback;
+    // 在單元測試中，我們不需要真的註冊硬體中斷
+    // 我們會直接呼叫 _internal_gpio_isr 來模擬
+}
+
+// =========================================================
+// 🧪 測試程式碼
+// =========================================================
 
 // 模擬 App 層的 Callback 函式 (Mock)
 volatile int callback_triggered_count = 0;
@@ -19,11 +50,12 @@ void mock_app_handler(uint32_t gpio, uint32_t events)
 // Unity Setup (每個測試前重置狀態)
 void setUp(void)
 {
-    _app_callback = NULL;  // 重置 static 變數
+    // 注意：_app_callback 是 hal_gpio.c 裡的 static 變數
+    // 因為我們用了白箱測試 (#include .c)，所以可以直接存取它！
+    _app_callback = NULL;
     callback_triggered_count = 0;
 }
 
-// Unity Teardown
 void tearDown(void) {}
 
 // --- 測試案例 ---
@@ -45,7 +77,8 @@ void test_internal_isr_should_trigger_app_callback(void)
     hal_gpio_set_callback(mock_app_handler);
 
     // Act: 直接呼叫 static ISR (模擬硬體行為)
-    _internal_gpio_isr(22, 0x04);  // 0x04 = GPIO_IRQ_EDGE_FALL
+    // 因為 mock/pico/stdlib.h 定義了 uint，這裡編譯器就能正確識別參數了
+    _internal_gpio_isr(22, GPIO_IRQ_EDGE_FALL);
 
     // Assert
     TEST_ASSERT_EQUAL_INT(1, callback_triggered_count);
@@ -58,7 +91,7 @@ void test_internal_isr_should_do_nothing_if_no_callback(void)
     _app_callback = NULL;
 
     // Act
-    _internal_gpio_isr(22, 0x04);
+    _internal_gpio_isr(22, GPIO_IRQ_EDGE_FALL);
 
     // Assert
     TEST_ASSERT_EQUAL_INT(0, callback_triggered_count);

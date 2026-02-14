@@ -1,18 +1,43 @@
-#include "hal/hal_init.h"
+#include <stdio.h>
 
-// 宣告外部函式 (這個函式定義在 src/app/app_blink.c)
-// 在正式專案中，這行通常會放在 app.h 裡，但現在我們先簡單處理
-void app_blink_run(void);
+#include "app/app_display.h"
+#include "hal_init.h"
+#include "hal_led.h"  // 引入 LED 介面
+#include "pico/stdlib.h"
 
 int main(void)
 {
-    // 1. 硬體底層初始化 (包含 stdio, USB 等)
+    // 1. 取得 LED 驅動實體
+    const LedDevice *led = hal_led_get_default();
+
+    // 2. 系統初始化
     hal_init_system();
 
-    // 2. 直接跳進 App 層的無限迴圈
-    // 從這裡開始，就是 Day 7 雙核心邏輯的主場
-    app_blink_run();
+    // 3. LED 初始化 (這會呼叫你寫的 pico_w_led_init)
+    if (led->init() != COMMON_OK)
+    {
+        printf("LED Driver Init Failed!\n");
+    }
 
-    // 理論上程式不會跑到這裡，因為 app_blink_run 裡面有 while(1)
+    sleep_ms(3000);
+    printf("=== Pico 2W System Started ===\n");
+
+    // 4. OLED 初始化
+    if (!app_display_init())
+    {
+        printf("[Main] Display Init Failed\n");
+    }
+
+    // 5. Super Loop
+    while (1)
+    {
+        // 任務 A: I2C 顯示測試 (記得做 SDA 短路實驗!)
+        app_display_test_once();
+
+        // 任務 B: LED 閃爍 (透過介面呼叫)
+        led->toggle();
+
+        sleep_ms(1000);
+    }
     return 0;
 }

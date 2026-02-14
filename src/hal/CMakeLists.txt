@@ -7,6 +7,7 @@ add_library(hal STATIC
     hal_dma.c
     hal_multicore.c
     hal_gpio.c
+    hal_i2c.c
 )
 
 target_include_directories(hal PUBLIC
@@ -18,6 +19,7 @@ target_link_libraries(hal PUBLIC
     pico_cyw43_arch_none
     hardware_gpio
     hardware_dma
+    hardware_i2c
     pico_multicore
     common
 )

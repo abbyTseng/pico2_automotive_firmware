@@ -52,6 +52,16 @@ target_link_libraries(test_gpio_callback unity)
 add_test(NAME test_gpio_callback COMMAND test_gpio_callback)
 
 # ==============================================================================
+# 6. Day 9 新增的測試: test_hal_i2c (Bus Recovery)
+# ==============================================================================
+add_executable(test_hal_i2c
+    test_hal_i2c.c
+    # 注意：我們不加入 ../src/hal/hal_i2c.c，因為它已經被 include 在 .c 檔裡了 (白箱測試)
+)
+target_link_libraries(test_hal_i2c unity)
+add_test(NAME test_hal_i2c COMMAND test_hal_i2c)
+
+# ==============================================================================
 # 5. Day 7 的測試: test_ringbuffer
 # ==============================================================================
 # (如果你還沒寫 test_ringbuffer.c，這段可以先註解掉，不然會報錯找不到檔案)
