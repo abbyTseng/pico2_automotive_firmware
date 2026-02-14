@@ -21,7 +21,4 @@ void hal_i2c_init(uint32_t baudrate);
 hal_i2c_status_t hal_i2c_write_timeout(uint8_t addr, const uint8_t *src, size_t len,
                                        uint32_t timeout_us);
 
-// 強制執行 Bus Recovery (9 Clocks)
-static void hal_i2c_bus_recovery(void);
-
 #endif  // HAL_I2C_H
