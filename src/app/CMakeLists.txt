@@ -3,6 +3,7 @@
 add_library(app STATIC
     app_blink.c
     app_display.c
+    app_storage.c
 )
 
 target_include_directories(app PUBLIC

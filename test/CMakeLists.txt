@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 project(pico2_tests C)
-
+enable_testing()
 # ==============================================================================
 # 1. 環境準備 (Unity 測試框架)
 # ==============================================================================
@@ -13,14 +13,15 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(unity)
 
-enable_testing()
 
 # 設定標頭檔搜尋路徑 (讓測試程式找不到 .h 檔時去哪裡找)
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/mock
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src        # <--- 重點！包含到 src 這一層
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/app
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/common
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/hal
+    
 )
 
 # ==============================================================================
@@ -61,6 +62,21 @@ add_executable(test_hal_i2c
 target_link_libraries(test_hal_i2c unity)
 add_test(NAME test_hal_i2c COMMAND test_hal_i2c)
 
+# ==============================================================================
+# 6. Day 10 # 新增 App Storage 測試
+# ==============================================================================
+
+add_executable(test_app_storage
+    test_app_storage.c
+    mock_hal_storage.c          # 連結 Mock HAL
+# 修改這裡：使用相對路徑，不要用 CMAKE_SOURCE_DIR
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/app/app_storage.c
+)
+target_link_libraries(test_app_storage unity)
+target_include_directories(test_app_storage PRIVATE 
+    ${CMAKE_SOURCE_DIR}/src
+)
+add_test(NAME test_app_storage COMMAND test_app_storage)
 # ==============================================================================
 # 5. Day 7 的測試: test_ringbuffer
 # ==============================================================================

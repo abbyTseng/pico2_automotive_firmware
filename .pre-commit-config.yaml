@@ -27,3 +27,5 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+exclude: ^lib/|^test/|^build/|^src/ON/
